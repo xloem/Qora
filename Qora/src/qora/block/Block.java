@@ -38,11 +38,27 @@ import com.google.common.primitives.Longs;
 
 import database.DBSet;
 
+/*
+Additional network issues:
+- block height is a poor judge of difficulty, as it can be easily forged on a low difficulty fork.  instead use cumulative difficulty
+- the 'nothing at stake problem' is when a miner intentionally creates forks, and works only on those forks.  they can
+  theoretically then prevent consensus?  The concern is that it is free to invest in as many forks as you want, unlike PoW where
+  you may online mine for one.
+  Seems to me the solution would be to only follow the fork with the largest set of balances involved in block creation.  This is
+  probably cumulative difficulty.
+- qora, creator of qora,says:
+  The thing is is that it doesn't have to be signature. It just has to be unique per account so you can use a hash instead.
+  With hashes ofcourse everyone can predict who is going to generate the next block so you will have to up the confirmations
+  needed for the generating balance a lot.
+  ^-- I don't yet understand this generating balance confirmation thing
+      but I think the prediction issue could be solved by removing the r value from the signature, it would still prove you have
+      the private key
+ */
 
 public class Block {
 
 	//RELEASES (more are in Transaction.java)
-	public static final long POWFIX_RELEASE = 1454930000000l; // version 3
+	public static final long POWFIX_RELEASE = 1454343200000l; // version 3
 
 	public static final int MAX_BLOCK_BYTES = 1048576;
 	public static final int VERSION_LENGTH = 4;
