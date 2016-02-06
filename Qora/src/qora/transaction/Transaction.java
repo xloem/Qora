@@ -102,7 +102,7 @@ public abstract class Transaction {
 	public static final int MESSAGE_BLOCK_HEIGHT_RELEASE = 99000;
 	//public static final long ASSETS_RELEASE = 1411308000000l;
 	public static final long ASSETS_RELEASE = 0l;
-	public static final long POWFIX_RELEASE = 1455562800000l; // Block Version 3 // 2016-02-15T19:00:00+00:00
+	public static final long POWFIX_RELEASE = 1454345000000l; // Block Version 3 // testing
 
 	
 	//PROPERTIES LENGTH
