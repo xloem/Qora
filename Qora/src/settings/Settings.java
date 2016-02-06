@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -20,8 +21,13 @@ public class Settings {
 	//NETWORK
 	private static final int DEFAULT_MIN_CONNECTIONS = 5;
 	private static final int DEFAULT_MAX_CONNECTIONS = 20;
+	private static final int DEFAULT_MAX_RECEIVE_PEERS = 20;
+	private static final int DEFAULT_MAX_SENT_PEERS = 20;
 	private static final int DEFAULT_CONNECTION_TIMEOUT = 60000;
 	private static final int DEFAULT_PING_INTERVAL = 30000;
+	private static final boolean DEFAULT_TRYING_CONNECT_TO_BAD_PEERS = true;
+	private static final String[] DEFAULT_PEERS = { };
+
 	
 	//RPC
 	private static final int DEFAULT_RPC_PORT = 9085;
@@ -157,6 +163,7 @@ public class Settings {
 		return currentSettingsPath;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public List<Peer> getKnownPeers()
 	{
 		try
@@ -164,6 +171,9 @@ public class Settings {
 			//GET PEERS FROM JSON
 			JSONArray peersArray = (JSONArray) this.settingsJSON.get("knownpeers");
 			
+			if(peersArray.isEmpty())
+				peersArray.addAll(Arrays.asList(DEFAULT_PEERS));
+				
 			//CREATE LIST WITH PEERS
 			List<Peer> peers = new ArrayList<Peer>();
 			
@@ -202,6 +212,26 @@ public class Settings {
 		return DEFAULT_MAX_CONNECTIONS;
 	}
 	
+	public int getMaxReceivePeers()
+	{
+		if(this.settingsJSON.containsKey("maxreceivepeers"))
+		{
+			return ((Long) this.settingsJSON.get("maxreceivepeers")).intValue();
+		}
+		
+		return DEFAULT_MAX_RECEIVE_PEERS;
+	}
+	
+	public int getMaxSentPeers()
+	{
+		if(this.settingsJSON.containsKey("maxsentpeers"))
+		{
+			return ((Long) this.settingsJSON.get("maxsentpeers")).intValue();
+		}
+		
+		return DEFAULT_MAX_SENT_PEERS;
+	}
+	
 	public int getMinConnections()
 	{
 		if(this.settingsJSON.containsKey("minconnections"))
@@ -222,6 +252,16 @@ public class Settings {
 		return DEFAULT_CONNECTION_TIMEOUT;
 	}
 	
+	public boolean isTryingConnectToBadPeers()
+	{
+		if(this.settingsJSON.containsKey("tryingconnecttobadpeers"))
+		{
+			return ((Boolean) this.settingsJSON.get("tryingconnecttobadpeers")).booleanValue();
+		}
+		
+		return DEFAULT_TRYING_CONNECT_TO_BAD_PEERS;
+	}
+		
 	public int getRpcPort()
 	{
 		if(this.settingsJSON.containsKey("rpcport"))

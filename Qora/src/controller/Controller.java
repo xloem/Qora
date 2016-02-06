@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -71,8 +73,8 @@ import webserver.WebService;
 
 public class Controller extends Observable {
 
-	private String version = "0.24.0";
-	public static final String releaseVersion = "0.24.0";
+	private String version = "0.25.0 beta";
+	public static final String releaseVersion = "0.25.0";
 
 //	TODO ENUM would be better here
 	public static final int STATUS_NO_CONNECTIONS = 0;
@@ -89,7 +91,9 @@ public class Controller extends Observable {
 	private Wallet wallet;
 	private Synchronizer synchronizer;
 	private TransactionCreator transactionCreator;
-
+	private boolean needSync = false;
+	private Timer timer = new Timer();
+	
 	private Map<Peer, Integer> peerHeight;
 
 	private static Controller instance;
@@ -114,6 +118,10 @@ public class Controller extends Observable {
 		return this.status;
 	}
 
+	public void setNeedSync(boolean needSync) {
+		this.needSync = needSync;
+	}
+	
 	public void start() throws Exception {
 		// CHECK NETWORK PORT AVAILABLE
 		if (!Network.isPortAvailable(Network.PORT)) {
@@ -186,6 +194,13 @@ public class Controller extends Observable {
 			//FIRST NAME STORAGE UPDATE
 			UpdateUtil.repopulateTransactionFinalMap(  );
 			DBSet.getInstance().getLocalDataMap().set("txfinalmap", "1");
+		}
+		
+		if (DBSet.getInstance().getLocalDataMap().get("blogpostmap") == null ||  !DBSet.getInstance().getLocalDataMap().get("blogpostmap").equals("2"))
+		{
+			//recreate comment postmap
+			UpdateUtil.repopulateCommentPostMap();
+			DBSet.getInstance().getLocalDataMap().set("blogpostmap", "2");
 		}
 		
 		// CREATE SYNCHRONIZOR
@@ -433,6 +448,13 @@ public class Controller extends Observable {
 		return this.network.getActiveConnections();
 	}
 
+	public void walletStatusUpdate(int height) {
+		this.setChanged();
+		this.notifyObservers(new ObserverMessage(
+				ObserverMessage.WALLET_SYNC_STATUS, height));
+	}
+		
+		
 	public void onConnect(Peer peer) {
 
 		// GET HEIGHT
@@ -450,6 +472,24 @@ public class Controller extends Observable {
 			this.setChanged();
 			this.notifyObservers(new ObserverMessage(
 					ObserverMessage.NETWORK_STATUS, this.status));
+			
+			if(needSync)
+			{
+				this.timer.cancel();
+				this.timer = new Timer();
+				
+				TimerTask action = new TimerTask() {
+			        public void run() {
+			        	if(needSync && Controller.getInstance().getStatus() == STATUS_OKE)
+			        	{
+			        		Controller.getInstance().synchronizeWallet();
+			        	}
+			        }
+				};
+				
+				this.timer.schedule(action, 10000);
+			}
+			
 		}
 	}
 
@@ -790,9 +830,17 @@ public class Controller extends Observable {
 		// IF NEW WALLET CREADED
 		return this.wallet.create(seed, password, amount, false);
 	}
-
+	
 	public boolean recoverWallet(byte[] seed, String password, int amount) {
-		return this.wallet.create(seed, password, amount, true);
+		if(this.wallet.create(seed, password, amount, false))
+		{
+			Logger.getGlobal().info("The need to synchronize the wallet!");
+			needSync = true;
+
+			return true;
+		}
+		else
+			return false;
 	}
 
 	public List<Account> getAccounts() {
@@ -1036,7 +1084,11 @@ public class Controller extends Observable {
 	public Block getLastBlock() {
 		return this.blockChain.getLastBlock();
 	}
-
+	
+	public byte[] getWalletLastBlockSign() {
+		return this.wallet.getLastBlockSignature();
+	}
+	
 	public Block getBlock(byte[] header) {
 		return this.blockChain.getBlock(header);
 	}
@@ -1064,11 +1116,7 @@ public class Controller extends Observable {
 
 	public void newBlockGenerated(Block newBlock) {
 
-		// ADD TO BLOCKCHAIN
-		// if (newBlock.isValid())
-		// {
 		this.synchronizer.process(newBlock);
-		// }
 
 		// BROADCAST
 		this.broadcastBlock(newBlock);
@@ -1217,9 +1265,14 @@ public class Controller extends Observable {
 	}
 
 	public Pair<BigDecimal, Integer> calcRecommendedFeeForArbitraryTransaction(
-			byte[] data) {
+			byte[] data, List<Payment> payments) {
+		
+		if(payments == null) {
+			payments = new ArrayList<Payment>();
+		}
+		
 		return this.transactionCreator
-				.calcRecommendedFeeForArbitraryTransaction(data);
+				.calcRecommendedFeeForArbitraryTransaction(data, payments);
 	}
 
 	public Pair<BigDecimal, Integer> calcRecommendedFeeForMessage(byte[] message) {
@@ -1356,10 +1409,15 @@ public class Controller extends Observable {
 	}
 
 	public Pair<Transaction, Integer> createArbitraryTransaction(
-			PrivateKeyAccount creator, int service, byte[] data, BigDecimal fee) {
+			PrivateKeyAccount creator, List<Payment> payments, int service, byte[] data, BigDecimal fee) {
+		
+		if(payments == null) {
+			payments = new ArrayList<Payment>();
+		}
+		
 		// CREATE ONLY ONE TRANSACTION AT A TIME
 		synchronized (this.transactionCreator) {
-			return this.transactionCreator.createArbitraryTransaction(creator,
+			return this.transactionCreator.createArbitraryTransaction(creator, payments,
 					service, data, fee);
 		}
 	}
@@ -1422,11 +1480,11 @@ public class Controller extends Observable {
 	}
 
 	public Pair<Transaction, Integer> sendMessage(PrivateKeyAccount sender,
-			Account recipient, BigDecimal amount, BigDecimal fee,
+			Account recipient, long key, BigDecimal amount, BigDecimal fee,
 			byte[] isText, byte[] message, byte[] encryptMessage) {
 		synchronized (this.transactionCreator) {
 			return this.transactionCreator.createMessage(sender, recipient,
-					amount, fee, message, isText, encryptMessage);
+					key, amount, fee, message, isText, encryptMessage);
 		}
 
 	}

@@ -57,9 +57,6 @@ Additional network issues:
 
 public class Block {
 
-	//RELEASES (more are in Transaction.java)
-	public static final long POWFIX_RELEASE = 1454345000000l; // version 3
-
 	public static final int MAX_BLOCK_BYTES = 1048576;
 	public static final int VERSION_LENGTH = 4;
 	public static final int REFERENCE_LENGTH = 128;
@@ -567,7 +564,7 @@ public class Block {
 		{
 			return 1;
 		}
-		else if(getTimestamp() < POWFIX_RELEASE)
+		else if(getTimestamp() < Transaction.POWFIX_RELEASE)
 		{
 			return 2;
 		}

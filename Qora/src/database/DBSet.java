@@ -33,6 +33,8 @@ public class DBSet implements Observer, IDB {
 	private OrphanNameStorageMap orphanNameStorageMap;
 	private OrphanNameStorageHelperMap orphanNameStorageHelperMap;
 	private SharedPostsMap sharedPostsMap;
+	private PostCommentMap postCommentMap;
+	private CommentPostMap commentPostMap;
 	private LocalDataMap localDataMap;
 	private BlogPostMap blogPostMap;
 	private HashtagPostMap hashtagPostMap;
@@ -111,6 +113,8 @@ public class DBSet implements Observer, IDB {
 			this.orphanNameStorageMap = new OrphanNameStorageMap(this, database);
 			this.orphanNameStorageHelperMap = new OrphanNameStorageHelperMap(this, database);
 			this.sharedPostsMap = new SharedPostsMap(this, database);
+			this.postCommentMap = new PostCommentMap(this, database);
+			this.commentPostMap = new CommentPostMap(this, database);
 			this.localDataMap = new LocalDataMap(this, database);
 			this.blogPostMap = new BlogPostMap(this, database);
 			this.hashtagPostMap = new HashtagPostMap(this, database);
@@ -149,6 +153,8 @@ public class DBSet implements Observer, IDB {
 		this.nameStorageMap = new NameStorageMap(parent.nameStorageMap);
 		this.orphanNameStorageMap = new OrphanNameStorageMap(parent.orphanNameStorageMap);
 		this.sharedPostsMap = new SharedPostsMap(parent.sharedPostsMap);
+		this.postCommentMap = new PostCommentMap(parent.postCommentMap);
+		this.commentPostMap = new CommentPostMap(parent.commentPostMap);
 		this.orphanNameStorageHelperMap = new OrphanNameStorageHelperMap(parent.orphanNameStorageHelperMap);
 		this.localDataMap = new LocalDataMap(parent.localDataMap);
 		this.blogPostMap = new BlogPostMap(parent.blogPostMap);
@@ -182,6 +188,8 @@ public class DBSet implements Observer, IDB {
 		this.orphanNameStorageMap.reset();
 		this.orphanNameStorageHelperMap.reset();
 		this.sharedPostsMap.reset();
+		this.commentPostMap.reset();
+		this.postCommentMap.reset();
 		this.localDataMap.reset();
 		this.blogPostMap.reset();
 		this.hashtagPostMap.reset();
@@ -257,6 +265,14 @@ public class DBSet implements Observer, IDB {
 	public SharedPostsMap getSharedPostsMap()
 	{
 		return this.sharedPostsMap;
+	}
+	public PostCommentMap getPostCommentMap()
+	{
+		return this.postCommentMap;
+	}
+	public CommentPostMap getCommentPostMap()
+	{
+		return this.commentPostMap;
 	}
 	
 	public OrphanNameStorageHelperMap getOrphanNameStorageHelperMap()
@@ -363,6 +379,11 @@ public class DBSet implements Observer, IDB {
 				this.database.close();
 			}
 		}
+	}
+	
+	public boolean isStoped()
+	{
+		return this.database == null;
 	}
 	
 	public void commit()

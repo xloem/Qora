@@ -17,6 +17,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
@@ -68,6 +69,33 @@ public class NameStorageResource {
 
 		return json.toJSONString();
 	}
+	
+	@SuppressWarnings("unchecked")
+	@GET
+	@Path("/{name}/keys")
+	public String listKeysNameStorage(@PathParam("name") String name) {
+
+		Name nameObj = DBSet.getInstance().getNameMap().get(name);
+
+		if (nameObj == null) {
+			throw ApiErrorFactory.getInstance().createError(
+					ApiErrorFactory.ERROR_NAME_NOT_REGISTERED);
+		}
+
+		Map<String, String> map = DBSet.getInstance().getNameStorageMap()
+				.get(name);
+
+		JSONArray json = new JSONArray();
+		if (map != null) {
+			Set<String> keySet = map.keySet();
+
+			for (String key : keySet) {
+				json.add(key);
+			}
+		}
+
+		return json.toJSONString();
+	}
 
 	@SuppressWarnings("unchecked")
 	@GET
@@ -97,6 +125,7 @@ public class NameStorageResource {
 	@Path("/update/{name}")
 	public String updateEntry(String x, @PathParam("name") String name) {
 		try {
+			APIUtils.disallowRemote(request);
 
 			// READ JSON
 			JSONObject jsonObject = (JSONObject) JSONValue.parse(x);
@@ -230,7 +259,7 @@ public class NameStorageResource {
 						BigDecimal currentFee = Controller
 								.getInstance()
 								.calcRecommendedFeeForArbitraryTransaction(
-										resultbyteArray).getA();
+										resultbyteArray, null).getA();
 
 						completeFee = completeFee.add(currentFee);
 
@@ -303,7 +332,7 @@ public class NameStorageResource {
 					String results = "";
 					for (Pair<byte[], BigDecimal> pair : newPairs) {
 						result = Controller.getInstance()
-								.createArbitraryTransaction(account, 10,
+								.createArbitraryTransaction(account, null, 10,
 										pair.getA(), pair.getB());
 
 						results += ArbitraryTransactionsResource
@@ -315,7 +344,7 @@ public class NameStorageResource {
 				}
 			}
 			BigDecimal fee = Controller.getInstance()
-					.calcRecommendedFeeForArbitraryTransaction(bytes).getA();
+					.calcRecommendedFeeForArbitraryTransaction(bytes, null).getA();
 			APIUtils.askAPICallAllowed(
 					"POST namestorage/update/" + name + "\n"
 							+ GZIP.webDecompress(jsonString) + "\nfee: "
@@ -323,7 +352,7 @@ public class NameStorageResource {
 
 			// SEND PAYMENT
 			Pair<Transaction, Integer> result = Controller.getInstance()
-					.createArbitraryTransaction(account, 10, bytes, fee);
+					.createArbitraryTransaction(account, null, 10, bytes, fee);
 
 			return ArbitraryTransactionsResource
 					.checkArbitraryTransaction(result);

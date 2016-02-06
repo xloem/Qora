@@ -246,6 +246,13 @@
         </div>
       </div>
     </div>
+	<div id="commentModal" class="modal fade">
+	  <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <iframe id=commentIframe width="100%" height="100%" frameborder="0" src="#"></iframe>
+        </div>
+      </div>
+    </div>
     {{navbar}}
     <div class="container">
       <div class="row">
@@ -303,9 +310,9 @@
                     </div>
                     <div class="media-right">
                       <div class="btn-group post-actions">
-                        <button class="btn btn-default" onmouseover="changeTextarea{{blogpost.getSignature()}}(location.protocol + '//' + window.location.host + '/index/showpost.html?msg={{blogpost.getSignature()}}')" id="copybutton{{blogpost.getSignature()}}" data-toggle="tooltip" data-placement="bottom" title="Copy to clipboard" data-clipboard-target="clipboard_textarea">
+                        <a class="btn btn-default" href="/index/showpost.html?msg={{blogpost.getSignature()}}">
                           <i class="glyphicon glyphicon-link"></i>
-                        </button>
+                        </a>
                         {% if blogpost.getShareSignatureOpt() is not null%}
                           <button class ="btn btn-default" onclick="javascript:processDelete('{{blogpost.getShareSignatureOpt()}}')" >
                             <i class="glyphicon glyphicon-trash" style=""></i>
@@ -330,7 +337,43 @@
                 <div class="timeline-footer">
                   <a><span onclick="javascript:processLike('{{blogpost.getSignature()}}', {{blogpost.isLiking()}})" ><i class="glyphicon glyphicon-heart" style=""><font color=white>.</font>{{blogpost.getLikes()}}</i></a>
                   <a class="pull-right"><span onclick="javascript:processShare('{{blogpost.getSignature()}}' , '{{blogpost.getBlognameOpt()}}')" ><i class="glyphicon glyphicon-share"><font color=white>.</font>{{blogpost.getShares()}}</i></a>
+                        <div class="actionBox">
+                   {% for comment in blogpost.getComments() %}
+                    <div class="media commentList">
+                    {% if comment.getNameOpt() is not null %}
+                      <a class="media-left" href="/index/blog.html?blogname={{comment.nameOrCreator}}">
+                      {%else%}
+                      <a class="media-left" href="#">
+                  	{%endif%}
+                     {%if comment.getAvatar() is empty%}
+                        <img class="media-object commenterImage" src="/index/img/qora-user.png" alt="user image">
+          			{%else%}
+                        <img class="media-object commenterImage" src="{{comment.getAvatar()}}" alt="user image">
+          			{%endif%}
+                      </a>
+                      <div class="media-body">
+                      {% if comment.getNameOpt() is not null %}
+                        <h4 class="media-heading Commenter"><a href="/index/blog.html?blogname={{comment.nameOrCreator}}">{{comment.nameOrCreator}}</a></h4>
+          			{%else%}
+                        <h4 class="media-heading Commenter">{{comment.nameOrCreator}}</h4>
+          			{%endif%}
+                        <p class="commentText">{{comment.description}}</p>
+                        <span class="date sub-text">{{comment.creationTime}}</span>
+                      </div>
+                    </div>
+                     <button class ="btn btn-default" onclick="javascript:processCommentDelete('{{comment.getSignature()}}')" >
+                            <i class="glyphicon glyphicon-trash" style=""></i>
+                          </button>
+                {% endfor %}
+                {%if blogprofile is empty or blogprofile.isCommentingAllowed() %}
+                    <form class="form-inline" role="form">
+                      <div class="form-group">
+                        <a style="cursor: pointer;" onclick="javascript:showCommentForm('{{blogpost.getSignature()}}');">Comment</a>
+                      </div>
+                    </form>
+                {%endif%}
                 </div>
+              </div>
               </div>
             </li>			{% endfor %}
             {%else%}
@@ -502,6 +545,30 @@
 
 			return 0;
    		 }
+		function processCommentDelete(signature) {
+
+			$.post(
+			"/index/deletecomment.html",
+			{
+				signature: signature,
+			}).done( function(data) {
+				if(data.type == 'deleteError'){
+					$("#apimessage").html('<center><div class=\"alert alert-dismissible alert-danger\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\">×</button>Delete Error<br>'
+										+ data.errordetail + '</div></center>');
+				} else if (data.type == 'deleteSuccessful'){
+					$("#apimessage").html('<center><div class=\"alert alert-dismissible alert-success\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\">×</button>Delete successful<br>'
+										+ '</div></center>');
+				}
+
+
+			}).fail( function(xhr, textStatus, errorThrown) {
+				$("#apimessage").html('<center><div class=\"alert alert-dismissible alert-danger\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\">×</button>Delete Error<br>'
+										+ 'Connection Error<br>'
+										+ xhr.responseText + '</div></center>');
+			});
+
+			return 0;
+   		 }
 
 
 		function processShare(signature, blogname) {
@@ -641,6 +708,12 @@
 
 			return 0;
    		 }
+		 
+		 function showCommentForm(signature) {
+			$("#commentIframe").attr("src", "postblog.html?postid="+signature);
+			$("#commentModal").modal('show'); 
+		 }
+		 
 </script>
 <script type="text/javascript">
     $('ul.nav-tabs > li').removeClass('active');
@@ -789,24 +862,6 @@
         });
 {% endfor %}
     </script>
-<script type="text/javascript">
-    {% for blogpost in blogposts %}
-    var client = new ZeroClipboard( document.getElementById("copybutton{{blogpost.getSignature()}}") );
-    {% endfor %}
-
-    // client.on( "ready", function( readyEvent ) {
-      // alert( "ZeroClipboard SWF is ready!" );
-
-      // client.on( "aftercopy", function( event ) {
-        // `this` === `client`
-        // `event.target` === the element that was clicked
-    //     event.target.style.display = "none";
-    //     alert("Copied text to clipboard: " + event.data["text/plain"] );
-    //   } );
-    // } );
-
-
-</script>
 <script>
 
 </script>
