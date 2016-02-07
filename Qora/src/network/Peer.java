@@ -147,7 +147,7 @@ public class Peer extends Thread{
 					Message message = MessageFactory.getInstance().parse(this, in);
 					
 					//Logger.getGlobal().info("received message " + message.getType() + " from " + this.address.toString());
-					
+
 					//CHECK IF WE ARE WAITING FOR A MESSAGE WITH THAT ID
 					if(message.hasId() && this.messages.containsKey(message.getId()))
 					{
@@ -172,7 +172,7 @@ public class Peer extends Thread{
 		} 
 		catch (Exception e) 
 		{
-			//e.printStackTrace();
+			e.printStackTrace();
 			
 			//DISCONNECT
 			callback.onDisconnect(this);
@@ -194,6 +194,7 @@ public class Peer extends Thread{
 			}
 			
 			//SEND MESSAGE
+			//Logger.getGlobal().info("sending message " + message.getType() + " to " + this.address.toString());
 			synchronized(this.out)
 			{
 				this.out.write(message.toBytes());
