@@ -6,8 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -78,23 +78,22 @@ public class PeersResource
 		return array.toJSONString();
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@GET
 	@Path("full")
 	public String getFull() throws UnknownHostException
 	{
 		List<PeerInfo> iplist = DBSet.getInstance().getPeerMap().getAllPeers(1000);
 		
-		Map<String, JSONObject> output=new LinkedHashMap<String, JSONObject>();
+		Map output=new LinkedHashMap();
 
 		for(PeerInfo peer: iplist)
 		{
-			JSONObject o = new JSONObject();
+			Map o = new LinkedHashMap();
 			
 			o.put("findTime", DateTimeFormat.timestamptoString(peer.getFindTime()));
 			o.put("FindTimeStamp", peer.getFindTime());
 
-			
 			if(peer.getWhiteConnectTime()>0) {
 				o.put("lastWhite", DateTimeFormat.timestamptoString(peer.getWhiteConnectTime()));
 				o.put("lastWhiteTimeStamp", peer.getWhiteConnectTime());
@@ -112,15 +111,14 @@ public class PeersResource
 			}
 			o.put("whitePingCounter", peer.getWhitePingCouner());
 			output.put(InetAddress.getByAddress(peer.getAddress()).getHostAddress(), o);
-			
 		}
 		
 		return JSONValue.toJSONString(output);
 	}
-		
-	@POST
-	@Path("/clear") //not work?
-	public String clear()
+	
+	@DELETE
+	@Path("/known")
+	public String clearPeers()
 	{
 		DBSet.getInstance().getPeerMap().reset();
 		

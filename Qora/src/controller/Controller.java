@@ -405,6 +405,7 @@ public class Controller extends Observable {
 
 			createDataCheckpoint();
 
+			Logger.getGlobal().info("Closed.");
 			// FORCE CLOSE
 			System.exit(0);
 		}
@@ -457,6 +458,9 @@ public class Controller extends Observable {
 		
 	public void onConnect(Peer peer) {
 
+		if(DBSet.getInstance().isStoped())
+			return;
+		
 		// GET HEIGHT
 		int height = this.blockChain.getHeight();
 
