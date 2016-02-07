@@ -305,6 +305,13 @@ public class Network extends Observable implements ConnectionCallback {
 	{
 		this.run = false;
 		this.onMessage(null);
+		while (this.connectedPeers.size() > 0) {
+			try {
+				this.connectedPeers.get(0).close();
+			} catch (Exception e) {
+
+			}
+		}
 		this.acceptor.halt();
 		this.creator.halt();
 	}

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
@@ -38,12 +41,15 @@ import gui.Gui;
 import network.Network;
 import network.Peer;
 import network.message.BlockMessage;
+import network.message.FindMyselfMessage;
 import network.message.GetBlockMessage;
 import network.message.GetSignaturesMessage;
+import network.message.HeightMessage;
 import network.message.Message;
 import network.message.MessageFactory;
 import network.message.TransactionMessage;
 import network.message.VersionMessage;
+import ntp.NTP;
 import qora.BlockChain;
 import qora.BlockGenerator;
 import qora.BlockGenerator.ForgingStatus;
@@ -64,6 +70,7 @@ import qora.voting.Poll;
 import qora.voting.PollOption;
 import qora.wallet.Wallet;
 import settings.Settings;
+import utils.BuildTime;
 import utils.ObserverMessage;
 import utils.Pair;
 import utils.SimpleFileVisitorForRecursiveFolderDeletion;
@@ -93,17 +100,50 @@ public class Controller extends Observable {
 	private TransactionCreator transactionCreator;
 	private boolean needSync = false;
 	private Timer timer = new Timer();
+	private Random random = new SecureRandom();
+	byte[] foundMyselfID = new byte[128];
 	
 	private Map<Peer, Integer> peerHeight;
 
+	private Map<Peer, Pair<String, Long>> peersVersions;
+	
 	private static Controller instance;
 
 	public String getVersion() {
 		return version;
 	}
 
+	public byte[] getFoundMyselfID (){
+		return this.foundMyselfID;
+	}
+	
 	public Map<Peer, Integer> getPeerHeights() {
 		return peerHeight;
+	}
+	
+	public Integer getHeightOfPeer(Peer peer) {
+		if(peerHeight!=null && peerHeight.containsKey(peer)){
+			return peerHeight.get(peer);
+		}
+		else
+		{
+			return 0;
+		}
+	}
+	
+	public Map<Peer, Pair<String, Long>> getPeersVersions() {
+		return peersVersions;
+	}
+	
+	public Pair<String, Long> getVersionOfPeer(Peer peer) {
+		if(peerHeight!=null && peersVersions.containsKey(peer)){
+			return peersVersions.get(peer);
+		}
+		else
+		{
+			return new Pair<String, Long>("", 0l); 
+			//\u22640.24.0
+		}
 	}
 
 	public static Controller getInstance() {
@@ -123,6 +163,9 @@ public class Controller extends Observable {
 	}
 	
 	public void start() throws Exception {
+		
+		this.random.nextBytes(foundMyselfID);
+		
 		// CHECK NETWORK PORT AVAILABLE
 		if (!Network.isPortAvailable(Network.PORT)) {
 			throw new Exception("Network port " + Network.PORT
@@ -156,6 +199,9 @@ public class Controller extends Observable {
 																// FROM LONGEST
 																// CONNECTION
 																// ALIVE)
+		
+		this.peersVersions = new LinkedHashMap<Peer, Pair<String, Long>>();
+		
 		this.status = STATUS_NO_CONNECTIONS;
 		this.transactionCreator = new TransactionCreator();
 
@@ -464,10 +510,23 @@ public class Controller extends Observable {
 		// GET HEIGHT
 		int height = this.blockChain.getHeight();
 
-		// SEND VERSION MESSAGE
-		peer.sendMessage(MessageFactory.getInstance().createVersionMessage(
+		if(NTP.getTime() >= Transaction.POWFIX_RELEASE)
+		{
+			// SEND VERSION MESSAGE
+			peer.sendMessage( MessageFactory.getInstance().createVersionMessage( 
+				Controller.getInstance().getVersion(),
+				BuildTime.getBuildTimestamp() ));
+		
+			// SEND FOUNDMYSELF MESSAGE
+			peer.sendMessage( MessageFactory.getInstance().createFindMyselfMessage( 
+				Controller.getInstance().getFoundMyselfID() 
+				));
+		}
+		
+		// SEND HEIGTH MESSAGE
+		peer.sendMessage(MessageFactory.getInstance().createHeightMessage(
 				height));
-
+		
 		if (this.status == STATUS_NO_CONNECTIONS) {
 			// UPDATE STATUS
 			this.status = STATUS_OKE;
@@ -507,6 +566,8 @@ public class Controller extends Observable {
 		synchronized (this.peerHeight) {
 			this.peerHeight.remove(peer);
 
+			this.peersVersions.remove(peer);
+			
 			if (this.peerHeight.size() == 0) {
 				// UPDATE STATUS
 				this.status = STATUS_NO_CONNECTIONS;
@@ -543,14 +604,14 @@ public class Controller extends Observable {
 
 				break;
 
-			case Message.VERSION_TYPE:
+			case Message.HEIGHT_TYPE:
 
-				VersionMessage versionMessage = (VersionMessage) message;
+				HeightMessage heightMessage = (HeightMessage) message;
 
 				// ADD TO LIST
 				synchronized (this.peerHeight) {
-					this.peerHeight.put(versionMessage.getSender(),
-							versionMessage.getHeight());
+					this.peerHeight.put(heightMessage.getSender(),
+							heightMessage.getHeight());
 				}
 
 				break;
@@ -668,6 +729,30 @@ public class Controller extends Observable {
 					this.network.broadcast(message, excludes);
 				}
 
+				break;
+				
+			case Message.VERSION_TYPE:
+
+				VersionMessage versionMessage = (VersionMessage) message;
+
+				// ADD TO LIST
+				synchronized (this.peersVersions) {
+					this.peersVersions.put(versionMessage.getSender(),
+							new Pair<String, Long>(versionMessage.getStrVersion(), versionMessage.getBuildDateTime()) );
+				}
+
+				break;
+				
+			case Message.FIND_MYSELF_TYPE:
+
+				FindMyselfMessage findMyselfMessage = (FindMyselfMessage) message;
+				
+				if(Arrays.equals(findMyselfMessage.getFoundMyselfID(),Controller.getInstance().getFoundMyselfID())) {
+					message.getSender().close();
+				}
+				
+				Logger.getGlobal().info("Connected myself. Disconnect.");
+				
 				break;
 			}
 		}
