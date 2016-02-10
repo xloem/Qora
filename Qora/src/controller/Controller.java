@@ -100,6 +100,7 @@ public class Controller extends Observable {
 	private TransactionCreator transactionCreator;
 	private boolean needSync = false;
 	private Timer timer = new Timer();
+	private Timer timerPeerHeightUpdate = new Timer();
 	private Random random = new SecureRandom();
 	byte[] foundMyselfID = new byte[128];
 	
@@ -115,6 +116,16 @@ public class Controller extends Observable {
 
 	public byte[] getFoundMyselfID (){
 		return this.foundMyselfID;
+	}
+	
+	public void getSendMyHeightToPeer (Peer peer) {
+	
+		// GET HEIGHT
+		int height = this.blockChain.getHeight();
+				
+		// SEND HEIGTH MESSAGE
+		peer.sendMessage(MessageFactory.getInstance().createHeightMessage(
+				height));
 	}
 	
 	public Map<Peer, Integer> getPeerHeights() {
@@ -285,7 +296,33 @@ public class Controller extends Observable {
 				stopAll();
 			}
 		});
+		
+		
+		//TIMER TO SEND HEIGHT TO NETWORK EVERY 5 MIN 
+		
+		this.timerPeerHeightUpdate.cancel();
+		this.timerPeerHeightUpdate = new Timer();
+		
+		TimerTask action = new TimerTask() {
+	        public void run() {
+	        	if(Controller.getInstance().getStatus() == STATUS_OKE)
+	        	{
+	        		if(Controller.getInstance().getActivePeers().size() > 0)
+	        		{
+	        			Peer peer = Controller.getInstance().getActivePeers().get(
+	        				random.nextInt( Controller.getInstance().getActivePeers().size() )
+	        				);
+	        			if(peer != null){
+	        				Controller.getInstance().getSendMyHeightToPeer(peer);
+	        			}
+	        		}
+	        	}
+	        }
+		};
+		
+		this.timerPeerHeightUpdate.schedule(action, 5*60*1000, 5*60*1000);
 
+		
 		// REGISTER DATABASE OBSERVER
 		this.addObserver(DBSet.getInstance().getTransactionMap());
 		this.addObserver(DBSet.getInstance());
@@ -512,15 +549,15 @@ public class Controller extends Observable {
 
 		if(NTP.getTime() >= Transaction.POWFIX_RELEASE)
 		{
-			// SEND VERSION MESSAGE
-			peer.sendMessage( MessageFactory.getInstance().createVersionMessage( 
-				Controller.getInstance().getVersion(),
-				BuildTime.getBuildTimestamp() ));
-		
 			// SEND FOUNDMYSELF MESSAGE
 			peer.sendMessage( MessageFactory.getInstance().createFindMyselfMessage( 
 				Controller.getInstance().getFoundMyselfID() 
 				));
+
+			// SEND VERSION MESSAGE
+			peer.sendMessage( MessageFactory.getInstance().createVersionMessage( 
+				Controller.getInstance().getVersion(),
+				BuildTime.getBuildTimestamp() ));
 		}
 		
 		// SEND HEIGTH MESSAGE
@@ -536,23 +573,25 @@ public class Controller extends Observable {
 			this.notifyObservers(new ObserverMessage(
 					ObserverMessage.NETWORK_STATUS, this.status));
 			
-			if(needSync)
-			{
-				this.timer.cancel();
-				this.timer = new Timer();
-				
-				TimerTask action = new TimerTask() {
-			        public void run() {
-			        	if(needSync && Controller.getInstance().getStatus() == STATUS_OKE)
-			        	{
-			        		Controller.getInstance().synchronizeWallet();
-			        	}
-			        }
-				};
-				
-				this.timer.schedule(action, 10000);
-			}
+			this.timer.cancel();
+			this.timer = new Timer();
 			
+			TimerTask action = new TimerTask() {
+		        public void run() {
+		        	
+		        	if(Controller.getInstance().getStatus() == STATUS_OKE)
+			        {
+			        	Logger.getGlobal().info("STATUS OKE");
+				       	
+				       	if(needSync)
+				       	{
+				       		Controller.getInstance().synchronizeWallet();
+				       	}
+			        }
+		        }
+			};
+				
+			this.timer.schedule(action, 10000);
 		}
 	}
 
@@ -860,7 +899,7 @@ public class Controller extends Observable {
 		try {
 			synchronized (this.peerHeight) {
 				for (Peer peer : this.peerHeight.keySet()) {
-					if (peer == null) {
+					if (highestPeer == null && peer != null) {
 						highestPeer = peer;
 					} else {
 						// IF HEIGHT IS BIGGER

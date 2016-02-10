@@ -7,8 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import ntp.NTP;
 import controller.Controller;
+import database.DBSet;
+import ntp.NTP;
 import qora.account.Account;
 import qora.account.PrivateKeyAccount;
 import qora.account.PublicKeyAccount;
@@ -18,10 +19,8 @@ import qora.block.Block;
 import qora.naming.Name;
 import qora.naming.NameSale;
 import qora.payment.Payment;
-import qora.transaction.ArbitraryTransaction;
+import qora.transaction.ArbitraryTransactionV1;
 import qora.transaction.ArbitraryTransactionV3;
-import qora.transaction.MessageTransaction;
-import qora.transaction.MessageTransactionV3;
 import qora.transaction.BuyNameTransaction;
 import qora.transaction.CancelOrderTransaction;
 import qora.transaction.CancelSellNameTransaction;
@@ -29,6 +28,8 @@ import qora.transaction.CreateOrderTransaction;
 import qora.transaction.CreatePollTransaction;
 import qora.transaction.DeployATTransaction;
 import qora.transaction.IssueAssetTransaction;
+import qora.transaction.MessageTransactionV1;
+import qora.transaction.MessageTransactionV3;
 import qora.transaction.MultiPaymentTransaction;
 import qora.transaction.PaymentTransaction;
 import qora.transaction.RegisterNameTransaction;
@@ -41,7 +42,6 @@ import qora.voting.Poll;
 import settings.Settings;
 import utils.Pair;
 import utils.TransactionTimestampComparator;
-import database.DBSet;
 
 public class TransactionCreator
 {
@@ -404,10 +404,10 @@ public class TransactionCreator
 		if(time < Transaction.POWFIX_RELEASE)
 		{
 			//CREATE SIGNATURE
-			byte[] signature = ArbitraryTransaction.generateSignature(this.fork, creator, service, data, fee, time);
+			byte[] signature = ArbitraryTransactionV1.generateSignature(this.fork, creator, service, data, fee, time);
 							
 			//CREATE ARBITRARY TRANSACTION V1
-			arbitraryTransaction = new ArbitraryTransaction(creator, service, data, fee, time, creator.getLastReference(this.fork), signature);
+			arbitraryTransaction = new ArbitraryTransactionV1(creator, service, data, fee, time, creator.getLastReference(this.fork), signature);
 		}
 		else
 		{
@@ -439,7 +439,7 @@ public class TransactionCreator
 		if(time < Transaction.POWFIX_RELEASE)
 		{
 			//CREATE ARBITRARY TRANSACTION V1
-			arbitraryTransaction = new ArbitraryTransaction(creator, 0, data, Transaction.MINIMUM_FEE, time, signature, signature);
+			arbitraryTransaction = new ArbitraryTransactionV1(creator, 0, data, Transaction.MINIMUM_FEE, time, signature, signature);
 		}
 		else
 		{
@@ -683,8 +683,8 @@ public class TransactionCreator
 		if(timestamp < Transaction.POWFIX_RELEASE)
 		{
 			//CREATE MESSAGE TRANSACTION V1
-			byte[] signature = MessageTransaction.generateSignature(this.fork, sender, recipient, amount, fee, message, isText, encryptMessage, timestamp);
-			messageTx = new MessageTransaction(sender, recipient, amount, fee, message, isText, encryptMessage, timestamp, sender.getLastReference(this.fork), signature );
+			byte[] signature = MessageTransactionV1.generateSignature(this.fork, sender, recipient, amount, fee, message, isText, encryptMessage, timestamp);
+			messageTx = new MessageTransactionV1(sender, recipient, amount, fee, message, isText, encryptMessage, timestamp, sender.getLastReference(this.fork), signature );
 		}
 		else
 		{
@@ -715,7 +715,7 @@ public class TransactionCreator
 		if(timestamp < Transaction.POWFIX_RELEASE)
 		{
 			//CREATE MESSAGE TRANSACTION V1
-			messageTx = new MessageTransaction(sender, sender, Transaction.MINIMUM_FEE, Transaction.MINIMUM_FEE, message, new byte[1], new byte[1], time, signature, signature );
+			messageTx = new MessageTransactionV1(sender, sender, Transaction.MINIMUM_FEE, Transaction.MINIMUM_FEE, message, new byte[1], new byte[1], time, signature, signature );
 		}
 		else
 		{

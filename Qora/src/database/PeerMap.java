@@ -27,6 +27,7 @@ public class PeerMap extends DBMap<byte[], byte[]>
 {
 	private static final byte[] BYTE_WHITELISTED = new byte[]{0, 0};
 	private static final byte[] BYTE_BLACKLISTED = new byte[]{1, 1};
+	private static final byte[] BYTE_NOTFOUND = new byte[]{2, 2};
 	
 	private Map<Integer, Integer> observableData = new HashMap<Integer, Integer>();
 	
@@ -183,7 +184,7 @@ public class PeerMap extends DBMap<byte[], byte[]>
 				this.grayConnectTime = longGrayConnectTime;
 				this.whitePingCouner = longWhitePingCouner;
 			}
-			else
+			else if (data == null)
 			{				
 				this.address = address;
 				this.status = BYTE_WHITELISTED;
@@ -193,6 +194,15 @@ public class PeerMap extends DBMap<byte[], byte[]>
 				this.whitePingCouner = 0;
 				
 				this.updateFindingTime();
+			}
+			else if (Arrays.equals(data, BYTE_NOTFOUND))
+			{
+				this.address = address;
+				this.status = BYTE_NOTFOUND;
+				this.findingTime = 0;
+				this.whiteConnectTime = 0;
+				this.grayConnectTime = 0;
+				this.whitePingCouner = 0;
 			}
 		} 
 		
@@ -312,6 +322,26 @@ public class PeerMap extends DBMap<byte[], byte[]>
 			return new ArrayList<Peer>();
 		}	
 	}
+
+	public List<String> getAllPeersAddresses(int amount) {
+		try
+		{
+			List<String> addresses = new ArrayList<String>();
+			Iterator<byte[]> iterator = this.getKeys().iterator();
+			while(iterator.hasNext() && (amount == -1 || addresses.size() < amount))
+			{
+				byte[] addressBI = iterator.next();
+				addresses.add(InetAddress.getByAddress(addressBI).getHostAddress());
+			}
+			return addresses;
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+				
+			return new ArrayList<String>();
+		}
+	}
 	
 	public List<PeerInfo> getAllPeers(int amount)
 	{
@@ -414,7 +444,7 @@ public class PeerMap extends DBMap<byte[], byte[]>
 		byte[] addressByte = address.getAddress();
 
 		if(this.map == null){
-			return new PeerInfo(addressByte, null);
+			return new PeerInfo(addressByte, BYTE_NOTFOUND);
 		}
 		
 		if(this.map.containsKey(addressByte))
@@ -423,7 +453,7 @@ public class PeerMap extends DBMap<byte[], byte[]>
 			
 			return new PeerInfo(addressByte, data);
 		}
-		return new PeerInfo(addressByte, null);
+		return new PeerInfo(addressByte, BYTE_NOTFOUND);
 	}
 	
 	public boolean isBlacklisted(InetAddress address)
