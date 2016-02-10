@@ -182,14 +182,14 @@ public class Settings {
 				InetAddress address = InetAddress.getByName((String) peersArray.get(i));
 				
 				//CHECK IF SOCKET IS NOT LOCALHOST
-				if(!address.equals(InetAddress.getLocalHost()))
-				{
+				//if(!address.equals(InetAddress.getLocalHost()))
+				//{
 					//CREATE PEER
 					Peer peer = new Peer(address);
 								
 					//ADD TO LIST
 					peers.add(peer);
-				}
+				//}
 			}
 			
 			//RETURN

@@ -84,7 +84,8 @@ public class ConnectionAcceptor extends Thread{
 			catch(Exception e)
 			{
 				e.printStackTrace();
-				Logger.getGlobal().warning("Error accepting new connection");			
+				Logger.getGlobal().warning("Error accepting new connection");
+				break;
 			}
 		}
 	}

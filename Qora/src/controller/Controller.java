@@ -178,10 +178,10 @@ public class Controller extends Observable {
 		this.random.nextBytes(foundMyselfID);
 		
 		// CHECK NETWORK PORT AVAILABLE
-		if (!Network.isPortAvailable(Network.PORT)) {
+		/*if (!Network.isPortAvailable(Network.PORT)) {
 			throw new Exception("Network port " + Network.PORT
 					+ " already in use!");
-		}
+		}*/
 
 		// CHECK RPC PORT AVAILABLE
 		if (Settings.getInstance().isRpcEnabled()) {
