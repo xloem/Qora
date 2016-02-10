@@ -105,10 +105,10 @@ public class ConnectionCreator extends Thread {
 													{
 														if(Settings.getInstance().isTryingConnectToBadPeers() || !newPeer.isBad())
 														{
-															Logger.getGlobal().info(
-																"Connecting to peer " + newPeer.getAddress().getHostAddress() + " proposed by " + peer.getAddress().getHostAddress() 
-																+ " :: " + foreignPeersCounter + " / " + maxReceivePeers + " / " + peersMessage.getPeers().size() 
-																+ " :: Connections: " + callback.getActiveConnections().size());
+															//Logger.getGlobal().info(
+															//	"Connecting to peer " + newPeer.getAddress().getHostAddress() + " proposed by " + peer.getAddress().getHostAddress()
+															//	+ " :: " + foreignPeersCounter + " / " + maxReceivePeers + " / " + peersMessage.getPeers().size()
+															//	+ " :: Connections: " + callback.getActiveConnections().size());
 														
 															//CONNECT
 															newPeer.connect(callback);
